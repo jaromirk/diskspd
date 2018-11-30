@@ -29,7 +29,8 @@ param(
     $SampleInterval = 2,
     [ValidateSet("CSV FS","SSB Cache","SBL","S2D BW","Hyper-V LCPU","*")]
     [string[]] $sets = "CSV FS",
-    $log = $null
+    $log = $null,
+    [parameter(Mandatory=$false)] $ClusterName
 )
 
 if ($log -ne $null) {
@@ -353,7 +354,8 @@ function start-sample(
     # some display counter sets may repeat specific values (which is fine)
     $counters = ($ctrs.counters |% { $_ |% { $_ }} | group -NoElement).Name
 
-    icm -AsJob -JobName watch-cluster (Get-ClusterNode) {
+    $nodes=if($ClusterName){Get-ClusterNode -Cluster $ClusterName}else{Get-ClusterNode}
+    icm -AsJob -JobName watch-cluster ($nodes) {
 
         # extract countersamples, the object does not survive transfer between powershell sessions
         # extract as a list, not as the individual counters
@@ -370,7 +372,8 @@ $skipone = $false
 
 # hash of most recent samples/node
 $samples = @{}
-Get-ClusterNode |% { $samples[$_.Name] = $null }
+$nodes=if($ClusterName){Get-ClusterNode -Cluster $ClusterName}else{Get-ClusterNode}
+$nodes |% { $samples[$_.Name] = $null }
 
 while ($true) {
 
